@@ -631,7 +631,7 @@ async def gban(message: Message):
     text_rows = message.text.split("\n", 1)
     date_until = None # Если не указано время, то бессрочно
     date_until_str = "бессрочно"
-    target_quote = f" | \"{message.reply_to_message.text or "[ВЛОЖЕНИЕ]"}\"" if message.reply_to_message else ""
+    target_quote = f" | \"{message.reply_to_message.text or "[ВЛОЖЕНИЕ]"}\"" if message.reply_to_message and message.reply_to_message.from_user.id == target_tid else ""
     reason = f"Причина не указана.{target_quote}" # Если не указана причина - так и пишу
 
     ## Причина
@@ -835,7 +835,7 @@ async def gmute(message: Message):
     text_rows = message.text.split("\n", 1)
     date_until = None # Если не указано время, то бессрочно
     date_until_str = "бессрочно"
-    target_quote = f" | \"{message.reply_to_message.text or "[ВЛОЖЕНИЕ]"}\"" if message.reply_to_message else ""
+    target_quote = f" | \"{message.reply_to_message.text or "[ВЛОЖЕНИЕ]"}\"" if message.reply_to_message and message.reply_to_message.from_user.id == target_tid else ""
     reason = f"Причина не указана.{target_quote}" # Если не указана причина - так и пишу
 
     ## Причина
@@ -1054,7 +1054,7 @@ async def gkick(message: Message):
 
     # Парсинг сообщения: причина и время наказания
     text_rows = message.text.split("\n", 1)
-    target_quote = f" | \"{message.reply_to_message.text or "[ВЛОЖЕНИЕ]"}\"" if message.reply_to_message else ""
+    target_quote = f" | \"{message.reply_to_message.text or "[ВЛОЖЕНИЕ]"}\"" if message.reply_to_message and message.reply_to_message.from_user.id == target_tid else ""
     reason = f"Причина не указана.{target_quote}" # Если не указана причина - так и пишу
 
     ## Причина

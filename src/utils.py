@@ -162,37 +162,33 @@ async def get_sender_and_target(message: Message) -> tuple[dict, dict]:
 
     # Поиск получателя
     target_user = {}
-    if message.reply_to_message:
-        target_user = await db.mk_user(user=message.reply_to_message.from_user)
-    else:
-        # Если сообщение не ответ, то парсинг соо
-        target_username = await grep_username(message.text.split("\n")[0]) # Попытка найти в тексте @юзернейм (grep_username())
-        if target_username is None:
-            # @юз не найден
-            await message.reply("Нужно ответить на сообщение нужного пользователя или указать в сообщении его @юзернейм или @телеграмайди.") # Вывод
-            return None
-        elif target_username.isdigit():
-            # Если найденный @юз является TID
-            target_user = await db.get_user_by_tid(int(target_username)) # Сначала попытка найти в БД
-            if target_user is None:
-                # Если нет в БД, то обращение к Telegram API методу get_chat()
+    target_username = await grep_username(message.text.split("\n")[0]) # Попытка найти в первой строчке текста соо @юзернейм через grep_username()
+    if target_username is None:
+        # @юз не найден
+        # await message.reply("Нужно ответить на сообщение нужного пользователя или указать в сообщении его @юзернейм или @телеграмайди.") # Вывод
+        target_user = None
+    elif target_username.isdigit():
+        # Если найденный @юз является TID
+        target_user = await db.get_user_by_tid(int(target_username)) # Сначала попытка найти в БД
+        if target_user is None:
+            try:
+                # Если нет в БД, то обращение к Telegram API методу get_chat_member()
+                target_user = await bot.get_chat_member(message.chat.id, target_username)
+                target_user = await db.mk_user(user=target_user.user)
+            except TelegramBadRequest or TelegramForbiddenError or target_user is None:
+                # Если get_chat_member() ничего не дал, то продуем get_chat()
                 await sleep(2)
                 try:
                     target_user = await bot.get_chat(target_username)
                     target_user = await db.mk_user(user=target_user)
-                except TelegramBadRequest or TelegramForbiddenError or target_user is None and message.chat.type in ("group", "supergroup"):
-                    # Если не получилось получить через get_chat(), то,
-                    # в случае если это групповой чат, попытка найти человека через метод get_chat_member()
-                    await sleep(2)
-                    try:
-                        target_user = await bot.get_chat_member(message.chat.id, target_username)
-                        target_user = target_user.user
-                        target_user = await db.mk_user(user=target_user)
-                    except TelegramBadRequest or TelegramForbiddenError:
-                        target_user = None
-        else:
-            # @юз найден
-            target_user = await db.get_user_by_username(target_username)
+                except TelegramBadRequest or TelegramForbiddenError:
+                    target_user = None
+    else:
+        # @юз найден
+        target_user = await db.get_user_by_username(target_username)
+
+    if target_user is None and message.reply_to_message:
+        target_user = await db.mk_user(user=message.reply_to_message.from_user)
 
     # Проверка на наличие всех нужных записей
     if None in (target_user, sender_user): # LOL      hoiv yv8ty gvgb0ujnu 9hb97yb         --- Серафим даун 4/14/26
