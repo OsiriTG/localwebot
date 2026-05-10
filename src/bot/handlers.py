@@ -1133,6 +1133,48 @@ async def rmmes(message: Message):
             "<b>Удалите сообщение вручную.</b>"
         )
 
+async def rmreact(message: Message):
+    # Получение отправителя и получателя
+    sender_and_target = await get_sender_and_target(message)
+    if sender_and_target is None:
+        return
+    sender_user, target_user = sender_and_target
+
+    target_tid = target_user['tid'] # TID получателя
+
+    # Получение чата и паутины
+    chat_and_web = await get_chat_and_web(message)
+    if chat_and_web is None:
+        return
+    chat, web = chat_and_web
+
+    admins_tid = await db.get_web_admins_tid(web['web_id'])
+    if message.from_user.id not in admins_tid:
+        return await message.reply("У Вас недостаточно прав") # Вывод
+
+    sender_admin = await db.get_admin_by_tid(message.from_user.id, web['web_id'])
+    target_admin = await db.get_admin_by_tid(target_tid, web['web_id'])
+
+    if target_admin:
+        if target_admin['post'] == "owner" and message.from_user.id != web['owner_tid']:
+            return await message.reply(f"Недостаточно прав (<b>{post_str[sender_admin['post']]}</b>/<b>{post_str['owner']}</b>).") # Вывод
+        if post_strint[target_admin['post']] > 3 and post_strint[sender_admin['post']] < 3:
+            return await message.reply(f"Недостаточно прав (<b>{post_str[sender_admin['post']]}</b>/<b>{post_str['adminjr']}</b>).") # Вывод
+
+    try:
+        if message.reply_to_message:
+            await bot.delete_message_reaction(chat['chat_tid'], message.reply_to_message.message_id, target_tid)
+        else:
+            await bot.delete_all_message_reactions(chat['chat_tid'], target_tid)
+        await message.delete()
+    except TelegramBadRequest:
+        return await message.reply(
+            "<b>Не удалось.</b> Возможные причины:\n"
+            "・Сообщение или реакция уже удалена\n"
+            "・У бота нет прав\n\n"
+            "<b>Удалите реакцию вручную.</b>"
+        )
+
 # # # # # # # # #
 #   Остальное   #
 # # # # # # # # #
@@ -1530,72 +1572,72 @@ async def main(message: Message):
     if message.text is None:
         return
 
-    msgtextold = message.text.strip().casefold()
-
-    msgtextcf = message.text.casefold()
+    message_text_casefold = message.text.strip().casefold()
     for prefix in PREFIXES:
-        if msgtextcf.startswith(prefix.casefold()):
+        if message_text_casefold.startswith(prefix.casefold()):
             message = message.model_copy(update={
                 "text": message.text[len(prefix):].strip()
             })
             break
 
-    msgtext = message.text.strip()
-    msgtextcf = msgtext.casefold()
-    msgchattype = message.chat.type
+    message_text = message.text.strip()
+    message_text_casefold = message_text.casefold()
+    message_chat_type = message.chat.type
 
-    if msgtextcf in ("бот", "кинг", "пинг", "пиу", "пиф", "пук"):
+    if message_text_casefold in ("бот", "кинг", "пинг", "пиу", "пиф", "пук"):
         return await ping(message)
-    elif msgtext == "🗂️ Мои паутины" or msgtextcf in ("админ панель", "панель"):
+    elif message_text == "🗂️ Мои паутины" or message_text_casefold in ("админ панель", "панель"):
             return await get_web(message)
 
-    elif message.chat.type == "private":
-        if msgtext[2:] == "Создать паутину" or message.text[3:] == "Создать паутину":
+    elif message_chat_type == "private":
+        if message_text[2:] == "Создать паутину" or message.text[3:] == "Создать паутину":
             return await mk_web(message)
-        elif msgtext == "➕ Добавить в чат":
+        elif message_text == "➕ Добавить в чат":
             return await add_to_chat(message)
-        elif msgtext == "📚 Команды":
+        elif message_text == "📚 Команды":
             return await commands_list(message)
-        elif msgtextcf.startswith(("причины", "наказания")):
+        elif message_text_casefold.startswith(("причины", "наказания")):
             return await restr_reason_private(message)
 
-    elif message.chat.type in ("group", "supergroup"):
-        if msgtextcf == "паутина":
+    elif message_chat_type in ("group", "supergroup"):
+        if message_text_casefold == "паутина":
             return await get_chat(message) 
-        elif msgtextcf == "+паутина":
+        elif message_text_casefold == "+паутина":
             return await mk_chat(message)
-        elif msgtextcf == "-паутина":
+        elif message_text_casefold == "-паутина":
             return await rm_chat(message)
-        elif msgtextcf == "сделать админским":
+        elif message_text_casefold == "сделать админским":
             return await mk_admin_chat(message)
 
-        elif msgtextcf.startswith("повысить"):
+        elif message_text_casefold.startswith("повысить"):
             return await admin_up(message)
-        elif msgtextcf.startswith("понизить"):
+        elif message_text_casefold.startswith("понизить"):
             return await admin_down(message)
-        elif msgtextcf.startswith("снять"):
+        elif message_text_casefold.startswith("снять"):
             return await admin_fire(message)
 
-        elif msgtextold.startswith(("гбан", "глбан", "глобан")):
+        elif message_text_casefold.startswith(("гбан", "глбан", "глобан")):
             return await gban(message)
-        elif msgtextold.startswith(("гразбан", "глразбан", "глоразбан")):
+        elif message_text_casefold.startswith(("гразбан", "глразбан", "глоразбан")):
             return await gunban(message)
-        elif msgtextold.startswith(("гмут", "глмут", "гломут")):
+        elif message_text_casefold.startswith(("гмут", "глмут", "гломут")):
             return await gmute(message)
-        elif msgtextold.startswith(("гразмут", "глразмут", "глоразмут")):
+        elif message_text_casefold.startswith(("гразмут", "глразмут", "глоразмут")):
             return await gunmute(message)
-        elif msgtextold.startswith(("гкик", "глкик", "глокик", "глок17")):
+        elif message_text_casefold.startswith(("гкик", "глкик", "глокик", "глок17")):
             return await gkick(message)
-        elif msgtextcf in ("-соо", "-сообщение", "удалить", "-смс"):
+        elif message_text_casefold in ("-соо", "-сообщение", "удалить", "-смс", "почистить"):
             return await rmmes(message)
+        elif message_text_casefold.startswith(("-реакт", "-реакция", "-эмодзи", "-р")):
+            return await rmreact(message)
 
-        elif msgtextcf.startswith(("жалоба", "репорт", "реп", "report", "rep")):
+        elif message_text_casefold.startswith(("жалоба", "репорт", "реп", "report", "rep")):
             return await report(message)
-        elif msgtextcf == "чаты":
+        elif message_text_casefold == "чаты":
             return await chats_tid(message)
-        elif msgtextcf in ("админы", "кто админ", "кто гладмин", "кто глоадмин", "кто админы", "кто гладмины", "кто глоадмины"):
+        elif message_text_casefold in ("админы", "кто админ", "кто гладмин", "кто глоадмин", "кто админы", "кто гладмины", "кто глоадмины"):
             return await admins(message)
-        elif msgtextcf in ("жалобы", "репорты"):
+        elif message_text_casefold in ("жалобы", "репорты"):
             return await reports(message)
-        elif msgtextcf.startswith(("причина", "причины", "наказание", "наказания")):
+        elif message_text_casefold.startswith(("причина", "причины", "наказание", "наказания")):
             return await restr_reason_group(message)
