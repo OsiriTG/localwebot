@@ -1572,9 +1572,9 @@ async def main(message: Message):
     if message.text is None:
         return
 
-    message_text_casefold = message.text.strip().casefold()
+    message_text_casefold_old = message.text.strip().casefold()
     for prefix in PREFIXES:
-        if message_text_casefold.startswith(prefix.casefold()):
+        if message_text_casefold_old.startswith(prefix.casefold()):
             message = message.model_copy(update={
                 "text": message.text[len(prefix):].strip()
             })
@@ -1616,15 +1616,15 @@ async def main(message: Message):
         elif message_text_casefold.startswith("снять"):
             return await admin_fire(message)
 
-        elif message_text_casefold.startswith(("гбан", "глбан", "глобан")):
+        elif message_text_casefold_old.startswith(("гбан", "глбан", "глобан")):
             return await gban(message)
-        elif message_text_casefold.startswith(("гразбан", "глразбан", "глоразбан")):
+        elif message_text_casefold_old.startswith(("гразбан", "глразбан", "глоразбан")):
             return await gunban(message)
-        elif message_text_casefold.startswith(("гмут", "глмут", "гломут")):
+        elif message_text_casefold_old.startswith(("гмут", "глмут", "гломут")):
             return await gmute(message)
-        elif message_text_casefold.startswith(("гразмут", "глразмут", "глоразмут")):
+        elif message_text_casefold_old.startswith(("гразмут", "глразмут", "глоразмут")):
             return await gunmute(message)
-        elif message_text_casefold.startswith(("гкик", "глкик", "глокик", "глок17")):
+        elif message_text_casefold_old.startswith(("гкик", "глкик", "глокик", "глок17")):
             return await gkick(message)
         elif message_text_casefold in ("-соо", "-сообщение", "удалить", "-смс", "почистить"):
             return await rmmes(message)
